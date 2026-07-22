@@ -55,7 +55,7 @@ class LayerPromptDialog(QDialog):
         self.input_layer_name = QLineEdit()
         self.input_attribute = QLineEdit()
 
-        btn_container = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, Qt.Horizontal, self)
+        btn_container = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel, Qt.Orientation.Horizontal, self)
         btn_container.accepted.connect(self.accept)
         btn_container.rejected.connect(self.reject)
 
@@ -87,12 +87,12 @@ class LayerPromptDialog(QDialog):
         self.input_layer_name.setEnabled(not is_appending)
 
     def request_layer_info(self):
-        exec_result = self.exec_()
+        exec_result = self.exec()
         return (
             self.input_layer_name.text(),
             self.input_attribute.text(),
             self.chk_append.isChecked(),
             self.combo_layers.currentIndex(),
             self.available_layers,
-            exec_result == QDialog.Accepted
+            exec_result == QDialog.DialogCode.Accepted
         )

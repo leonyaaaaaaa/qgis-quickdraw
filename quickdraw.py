@@ -305,13 +305,13 @@ class QuickDraw(object):
                 sym = dest_layer.renderer().symbol()
                 sym.setColor(self.config_window.fill_color)
                 
-                if dest_layer.geometryType() == QgsWkbTypes.PolygonGeometry:
+                if dest_layer.geometryType() == QgsWkbTypes.GeometryType.PolygonGeometry:
                     sym.symbolLayer(0).setStrokeColor(self.config_window.stroke_color)
                     sym.symbolLayer(0).setStrokeWidth(self.config_window.stroke_width * 0.26)
-                elif dest_layer.geometryType() == QgsWkbTypes.LineGeometry:
+                elif dest_layer.geometryType() == QgsWkbTypes.GeometryType.LineGeometry:
                     sym.setColor(self.config_window.stroke_color)
                     sym.setWidth(self.config_window.stroke_width * 0.26)
-                elif dest_layer.geometryType() == QgsWkbTypes.PointGeometry:
+                elif dest_layer.geometryType() == QgsWkbTypes.GeometryType.PointGeometry:
                     sym.symbolLayer(0).setStrokeColor(self.config_window.stroke_color)
                     sym.setSize(self.config_window.stroke_width * 2)
                 

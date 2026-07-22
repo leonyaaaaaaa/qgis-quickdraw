@@ -36,7 +36,7 @@ class ToolRectangle(QgsMapToolEmitPoint):
         self.map_canvas = iface.mapCanvas()
         super().__init__(self.map_canvas)
         self.iface = iface
-        self.rb = QgsRubberBand(self.map_canvas, QgsWkbTypes.PolygonGeometry)
+        self.rb = QgsRubberBand(self.map_canvas, QgsWkbTypes.GeometryType.PolygonGeometry)
         self.rb.setFillColor(fill_color)
         self.rb.setStrokeColor(stroke_color)
         self.rb.setWidth(stroke_width)
@@ -45,17 +45,17 @@ class ToolRectangle(QgsMapToolEmitPoint):
     def reset(self):
         self.pt_origin = self.pt_current = None
         self.is_tracking = False
-        self.rb.reset(QgsWkbTypes.PolygonGeometry)
+        self.rb.reset(QgsWkbTypes.GeometryType.PolygonGeometry)
 
     def canvasPressEvent(self, event):
-        if event.button() == Qt.LeftButton:
+        if event.button() == Qt.MouseButton.LeftButton:
             self.pt_origin = self.toMapCoordinates(event.pos())
             self.pt_current = self.pt_origin
             self.is_tracking = True
 
     def canvasReleaseEvent(self, event):
         self.is_tracking = False
-        if event.button() != Qt.LeftButton: return
+        if event.button() != Qt.MouseButton.LeftButton: return
         
         if self.rb.numberOfVertices() > 3:
             self.selectionDone.emit()
@@ -74,7 +74,7 @@ class ToolRectangle(QgsMapToolEmitPoint):
             self.render_box(self.pt_origin, self.pt_current)
 
     def render_box(self, p_start, p_end):
-        self.rb.reset(QgsWkbTypes.PolygonGeometry)
+        self.rb.reset(QgsWkbTypes.GeometryType.PolygonGeometry)
         if p_start.x() == p_end.x() or p_start.y() == p_end.y(): return
         self.rb.addPoint(QgsPointXY(p_start.x(), p_start.y()), False)
         self.rb.addPoint(QgsPointXY(p_start.x(), p_end.y()), False)
@@ -83,7 +83,7 @@ class ToolRectangle(QgsMapToolEmitPoint):
         self.rb.show()
 
     def deactivate(self):
-        self.rb.reset(QgsWkbTypes.PolygonGeometry)
+        self.rb.reset(QgsWkbTypes.GeometryType.PolygonGeometry)
         super().deactivate()
 
 class DimensionDialog(QDialog):
@@ -95,7 +95,7 @@ class DimensionDialog(QDialog):
         self.val_w.setValidator(QDoubleValidator())
         self.val_h.setValidator(QDoubleValidator())
 
-        btn_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, Qt.Horizontal, self)
+        btn_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel, Qt.Orientation.Horizontal, self)
         btn_box.accepted.connect(self.accept)
         btn_box.rejected.connect(self.reject)
 
@@ -109,12 +109,12 @@ class DimensionDialog(QDialog):
         self.setLayout(layout)
 
     def prompt_dimensions(self):
-        result = self.exec_()
+        result = self.exec()
         w, h = 0.0, 0.0
         if self.val_w.text().strip() and self.val_h.text().strip():
             w = float(self.val_w.text())
             h = float(self.val_h.text())
-        return w, h, result == QDialog.Accepted
+        return w, h, result == QDialog.DialogCode.Accepted
 
 class ToolPolygon(QgsMapTool):
     selectionDone = pyqtSignal()
@@ -125,19 +125,19 @@ class ToolPolygon(QgsMapTool):
         super().__init__(self.map_canvas)
         self.iface = iface
         self.draw_state = 0
-        self.rb = QgsRubberBand(self.map_canvas, QgsWkbTypes.PolygonGeometry)
+        self.rb = QgsRubberBand(self.map_canvas, QgsWkbTypes.GeometryType.PolygonGeometry)
         self.rb.setFillColor(fill_color)
         self.rb.setStrokeColor(stroke_color)
         self.rb.setWidth(stroke_width)
 
     def keyPressEvent(self, event):
-        if event.matches(QKeySequence.Undo) and self.rb.numberOfVertices() > 1:
+        if event.matches(QKeySequence.StandardKey.Undo) and self.rb.numberOfVertices() > 1:
             self.rb.removeLastPoint()
 
     def canvasPressEvent(self, event):
-        if event.button() == Qt.LeftButton:
+        if event.button() == Qt.MouseButton.LeftButton:
             if self.draw_state == 0:
-                self.rb.reset(QgsWkbTypes.PolygonGeometry)
+                self.rb.reset(QgsWkbTypes.GeometryType.PolygonGeometry)
                 self.draw_state = 1
             self.rb.addPoint(self.toMapCoordinates(event.pos()))
         else:
@@ -155,10 +155,10 @@ class ToolPolygon(QgsMapTool):
 
     def reset(self):
         self.draw_state = 0
-        self.rb.reset(QgsWkbTypes.PolygonGeometry)
+        self.rb.reset(QgsWkbTypes.GeometryType.PolygonGeometry)
 
     def deactivate(self):
-        self.rb.reset(QgsWkbTypes.PolygonGeometry)
+        self.rb.reset(QgsWkbTypes.GeometryType.PolygonGeometry)
         super().deactivate()
 
 class ToolCircle(QgsMapTool):
@@ -171,13 +171,13 @@ class ToolCircle(QgsMapTool):
         self.iface = iface
         self.draw_state = 0
         self.N_segments = N_segments
-        self.rb = QgsRubberBand(self.map_canvas, QgsWkbTypes.PolygonGeometry)
+        self.rb = QgsRubberBand(self.map_canvas, QgsWkbTypes.GeometryType.PolygonGeometry)
         self.rb.setFillColor(fill_color)
         self.rb.setStrokeColor(stroke_color)
         self.rb.setWidth(stroke_width)
 
     def canvasPressEvent(self, event):
-        if event.button() == Qt.LeftButton:
+        if event.button() == Qt.MouseButton.LeftButton:
             self.draw_state = 1
             self.center_pt = self.toMapCoordinates(event.pos())
             self._build_circle(self.center_pt)
@@ -189,7 +189,7 @@ class ToolCircle(QgsMapTool):
             self.move.emit()
 
     def canvasReleaseEvent(self, event):
-        if event.button() != Qt.LeftButton: return
+        if event.button() != Qt.MouseButton.LeftButton: return
         self.draw_state = 0
         if self.rb.numberOfVertices() > 3:
             self.selectionDone.emit()
@@ -204,7 +204,7 @@ class ToolCircle(QgsMapTool):
 
     def _build_circle(self, edge_pt):
         radius = sqrt(self.center_pt.sqrDist(edge_pt))
-        self.rb.reset(QgsWkbTypes.PolygonGeometry)
+        self.rb.reset(QgsWkbTypes.GeometryType.PolygonGeometry)
         for step in range(self.N_segments + 1):
             angle = step * (2.0 * pi / self.N_segments)
             self.rb.addPoint(QgsPointXY(self.center_pt.x() + radius * cos(angle),
@@ -212,10 +212,10 @@ class ToolCircle(QgsMapTool):
 
     def reset(self):
         self.draw_state = 0
-        self.rb.reset(QgsWkbTypes.PolygonGeometry)
+        self.rb.reset(QgsWkbTypes.GeometryType.PolygonGeometry)
 
     def deactivate(self):
-        self.rb.reset(QgsWkbTypes.PolygonGeometry)
+        self.rb.reset(QgsWkbTypes.GeometryType.PolygonGeometry)
         super().deactivate()
 
 class ToolLine(QgsMapTool):
@@ -227,18 +227,18 @@ class ToolLine(QgsMapTool):
         super().__init__(self.map_canvas)
         self.iface = iface
         self.draw_state = 0
-        self.rb = QgsRubberBand(self.map_canvas, QgsWkbTypes.LineGeometry)
+        self.rb = QgsRubberBand(self.map_canvas, QgsWkbTypes.GeometryType.LineGeometry)
         self.rb.setColor(stroke_color)
         self.rb.setWidth(stroke_width)
 
     def keyPressEvent(self, event):
-        if event.matches(QKeySequence.Undo) and self.rb.numberOfVertices() > 1:
+        if event.matches(QKeySequence.StandardKey.Undo) and self.rb.numberOfVertices() > 1:
             self.rb.removeLastPoint()
 
     def canvasPressEvent(self, event):
-        if event.button() == Qt.LeftButton:
+        if event.button() == Qt.MouseButton.LeftButton:
             if self.draw_state == 0:
-                self.rb.reset(QgsWkbTypes.LineGeometry)
+                self.rb.reset(QgsWkbTypes.GeometryType.LineGeometry)
                 self.draw_state = 1
             self.rb.addPoint(self.toMapCoordinates(event.pos()))
         else:
@@ -256,10 +256,10 @@ class ToolLine(QgsMapTool):
 
     def reset(self):
         self.draw_state = 0
-        self.rb.reset(QgsWkbTypes.LineGeometry)
+        self.rb.reset(QgsWkbTypes.GeometryType.LineGeometry)
 
     def deactivate(self):
-        self.rb.reset(QgsWkbTypes.LineGeometry)
+        self.rb.reset(QgsWkbTypes.GeometryType.LineGeometry)
         super().deactivate()
 
 class ToolPoint(QgsMapTool):
@@ -269,20 +269,20 @@ class ToolPoint(QgsMapTool):
         self.map_canvas = iface.mapCanvas()
         super().__init__(self.map_canvas)
         self.iface = iface
-        self.rb = QgsRubberBand(self.map_canvas, QgsWkbTypes.PointGeometry)
+        self.rb = QgsRubberBand(self.map_canvas, QgsWkbTypes.GeometryType.PointGeometry)
         self.rb.setColor(fill_color)
         self.rb.setWidth(stroke_width)
 
     def canvasReleaseEvent(self, event):
-        if event.button() == Qt.LeftButton:
+        if event.button() == Qt.MouseButton.LeftButton:
             self.rb.addPoint(self.toMapCoordinates(event.pos()))
             self.selectionDone.emit()
 
     def reset(self):
-        self.rb.reset(QgsWkbTypes.PointGeometry)
+        self.rb.reset(QgsWkbTypes.GeometryType.PointGeometry)
 
     def deactivate(self):
-        self.rb.reset(QgsWkbTypes.PointGeometry)
+        self.rb.reset(QgsWkbTypes.GeometryType.PointGeometry)
         super().deactivate()
 
 class ToolBufferSelect(QgsMapTool):
@@ -293,15 +293,15 @@ class ToolBufferSelect(QgsMapTool):
         self.map_canvas = iface.mapCanvas()
         super().__init__(self.map_canvas)
         self.iface = iface
-        self.rb = QgsRubberBand(self.map_canvas, QgsWkbTypes.PolygonGeometry)
+        self.rb = QgsRubberBand(self.map_canvas, QgsWkbTypes.GeometryType.PolygonGeometry)
         self.rb.setFillColor(fill_color)
         self.rb.setStrokeColor(stroke_color)
         self.rb.setWidth(stroke_width)
-        self.rbSelect = QgsRubberBand(self.map_canvas, QgsWkbTypes.PolygonGeometry)
+        self.rbSelect = QgsRubberBand(self.map_canvas, QgsWkbTypes.GeometryType.PolygonGeometry)
 
     def canvasReleaseEvent(self, event):
-        if event.button() == Qt.LeftButton:
-            self.rbSelect.reset(QgsWkbTypes.PolygonGeometry)
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.rbSelect.reset(QgsWkbTypes.GeometryType.PolygonGeometry)
             px, py = event.pos().x(), event.pos().y()
             offsets = [(-5, -5), (5, -5), (5, 5), (-5, 5)]
             for dx, dy in offsets:
@@ -311,12 +311,12 @@ class ToolBufferSelect(QgsMapTool):
             self.selectionDone.emit()
 
     def reset(self):
-        self.rb.reset(QgsWkbTypes.PolygonGeometry)
-        self.rbSelect.reset(QgsWkbTypes.PolygonGeometry)
+        self.rb.reset(QgsWkbTypes.GeometryType.PolygonGeometry)
+        self.rbSelect.reset(QgsWkbTypes.GeometryType.PolygonGeometry)
 
     def deactivate(self):
-        self.rb.reset(QgsWkbTypes.PolygonGeometry)
-        self.rbSelect.reset(QgsWkbTypes.PolygonGeometry)
+        self.rb.reset(QgsWkbTypes.GeometryType.PolygonGeometry)
+        self.rbSelect.reset(QgsWkbTypes.GeometryType.PolygonGeometry)
         super().deactivate()
 
 class CoordinateInputDialog(QDialog):
@@ -386,7 +386,7 @@ class CoordinateInputDialog(QDialog):
         
         self.layout_main.addWidget(self.grp_dms)
 
-        btn_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, Qt.Horizontal, self)
+        btn_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel, Qt.Orientation.Horizontal, self)
         btn_box.accepted.connect(self.accept)
         btn_box.rejected.connect(self.reject)
         self.layout_main.addWidget(btn_box)
@@ -398,13 +398,13 @@ class CoordinateInputDialog(QDialog):
 
     def _change_crs(self):
         selector = QgsProjectionSelectionDialog(self)
-        if selector.exec_():
+        if selector.exec():
             self.current_crs = selector.crs()
             self.lbl_crs.setText(self.current_crs.authid())
 
     def get_coordinate_data(self):
-        result = self.exec_()
-        is_ok = result == QDialog.Accepted
+        result = self.exec()
+        is_ok = result == QDialog.DialogCode.Accepted
         
         pt_x, pt_y = 0.0, 0.0
         output_crs = self.current_crs

@@ -43,7 +43,7 @@ class PluginConfigWindow(QWidget):
         self.btn_fill_color.setStyleSheet(f"background-color: {self.fill_color.name()}")
         self.btn_fill_color.clicked.connect(self._pick_fill_color)
         
-        self.slider_fill_alpha = QSlider(Qt.Horizontal)
+        self.slider_fill_alpha = QSlider(Qt.Orientation.Horizontal)
         self.slider_fill_alpha.setRange(0, 255)
         self.slider_fill_alpha.setValue(self.fill_color.alpha())
         self.slider_fill_alpha.valueChanged.connect(self._change_fill_alpha)
@@ -52,12 +52,12 @@ class PluginConfigWindow(QWidget):
         self.btn_stroke_color.setStyleSheet(f"background-color: {self.stroke_color.name()}")
         self.btn_stroke_color.clicked.connect(self._pick_stroke_color)
         
-        self.slider_stroke_alpha = QSlider(Qt.Horizontal)
+        self.slider_stroke_alpha = QSlider(Qt.Orientation.Horizontal)
         self.slider_stroke_alpha.setRange(0, 255)
         self.slider_stroke_alpha.setValue(self.stroke_color.alpha())
         self.slider_stroke_alpha.valueChanged.connect(self._change_stroke_alpha)
 
-        self.slider_width = QSlider(Qt.Horizontal)
+        self.slider_width = QSlider(Qt.Orientation.Horizontal)
         self.slider_width.setRange(1, 15)
         self.slider_width.setValue(self.stroke_width)
         self.slider_width.valueChanged.connect(self._change_width)
@@ -87,7 +87,7 @@ class PluginConfigWindow(QWidget):
         layout.addWidget(self.btn_reset)
 
     def _pick_fill_color(self):
-        c = QColorDialog.getColor(self.fill_color, self, tr("Select Fill Color"), QColorDialog.ShowAlphaChannel)
+        c = QColorDialog.getColor(self.fill_color, self, tr("Select Fill Color"), QColorDialog.ColorDialogOption.ShowAlphaChannel)
         if c.isValid():
             self.fill_color = c
             self.slider_fill_alpha.setValue(c.alpha())
@@ -99,7 +99,7 @@ class PluginConfigWindow(QWidget):
         self._save()
 
     def _pick_stroke_color(self):
-        c = QColorDialog.getColor(self.stroke_color, self, tr("Select Stroke Color"), QColorDialog.ShowAlphaChannel)
+        c = QColorDialog.getColor(self.stroke_color, self, tr("Select Stroke Color"), QColorDialog.ColorDialogOption.ShowAlphaChannel)
         if c.isValid():
             self.stroke_color = c
             self.slider_stroke_alpha.setValue(c.alpha())
@@ -125,8 +125,8 @@ class PluginConfigWindow(QWidget):
             self._save()
 
     def _save(self):
-        self.settings.setValue("quickdraw/fill_color", self.fill_color.name(QColor.HexArgb))
-        self.settings.setValue("quickdraw/stroke_color", self.stroke_color.name(QColor.HexArgb))
+        self.settings.setValue("quickdraw/fill_color", self.fill_color.name(QColor.NameFormat.HexArgb))
+        self.settings.setValue("quickdraw/stroke_color", self.stroke_color.name(QColor.NameFormat.HexArgb))
         self.settings.setValue("quickdraw/stroke_width", self.stroke_width)
         self.settings.setValue("quickdraw/remember_layer", "true" if self.remember_layer else "false")
         self.settings.setValue("quickdraw/attr_name", self.attr_name)
