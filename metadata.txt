@@ -1,0 +1,14 @@
+[general]
+name=quickdraw Tools
+qgisMinimumVersion=3.0
+description=Draw simple shapes fast and add them straight to the Map Registry as memory layers.
+version=beta 1
+author=leonya ivanchikov
+email=leonidivanchikovfromfuture@gmail.com
+about=quickdraw Tools speeds up on-the-fly digitizing in QGIS: point, line, rectangle, circle, polygon and buffer tools that write straight into memory layers, with configurable fill/stroke colors, stroke width, remembered layers and attribute field name, all saved between sessions.
+tags=draw,digitizing,buffer,quickdraw,shapes,memory layer
+category=Plugins
+icon=icon.png
+experimental=true
+deprecated=False
+license=GPL-3.0-or-later

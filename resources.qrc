@@ -1,0 +1,13 @@
+<RCC>
+    <qresource prefix="/plugins/Qgeric" >
+        <file>icon.png</file>
+        <file>resources/CircleDraw.png</file>
+        <file>resources/RectangleDraw.png</file>
+        <file>resources/LineDraw.png</file>
+        <file>resources/PolygonDraw.png</file>
+        <file>resources/PointDraw.png</file>
+        <file>resources/PointDrawXY.png</file>
+        <file>resources/BufferDraw.png</file>
+        <file>resources/Settings.png</file>
+    </qresource>
+</RCC>
