@@ -1,6 +1,5 @@
 # quickdraw tools
 
-**Version:** beta 1
 **License:** [GNU GPL v3](LICENSE)
 **Author:** leonya ivanchikov
 
