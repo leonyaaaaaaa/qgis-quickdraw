@@ -1,12 +1,13 @@
 [general]
 name=quickdraw tools
 qgisMinimumVersion=3.0
-description=Draw simple shapes fast and add them straight to the Map Registry as memory layers.
-version=1.0.2
+qgisMaximumVersion=4.9.9
+description=Draw simple shapes fast and add them straight to the Map Registry as memory or shapefile layers, with quick keyboard tags.
+version=2.1.0
 author=leonya ivanchikov
 email=leonidivanchikovfromfuture@gmail.com
-about=quickdraw Tools speeds up on-the-fly digitizing in QGIS: point, line, rectangle, circle, polygon and buffer tools that write straight into memory layers, with configurable fill/stroke colors, stroke width, remembered layers and attribute field name, all saved between sessions.
-tags=draw,digitizing,buffer,quickdraw,shapes,memory layer
+about=quickdraw Tools speeds up on-the-fly digitizing in QGIS: point, line, rectangle, circle, polygon and buffer tools that write straight into memory or Shapefile layers, with configurable fill/stroke colors, stroke width, remembered layers, attribute field name, and a keyboard-driven quick tag picker (up to 10 configurable tag groups), all saved between sessions.
+tags=draw,digitizing,buffer,quickdraw,shapes,memory layer,shapefile,tags,svg
 category=Plugins
 icon=icon.png
 experimental=true
@@ -15,3 +16,18 @@ license=GPL-3.0-or-later
 homepage=https://github.com/leonyaaaaaaa/qgis-quickdraw
 repository=https://github.com/leonyaaaaaaa/qgis-quickdraw
 tracker=https://github.com/leonyaaaaaaa/qgis-quickdraw/issues
+changelog=2.1.0
+    - Quick tag picker reworked: now steps through your groups one at a time
+      in order (Tab skips a group, Enter confirms it and moves to the next);
+      finishes automatically after the last group
+    - Multiple tags from the same group can be combined in one field
+      (e.g. Au, As, Ag together)
+    - Per-group "Case sensitive" option for letter-keyed groups
+2.0.0
+    - Icons switched from compiled Qt resources to SVG files loaded directly from disk
+    - Qt6/QGIS4 compatibility fixes (QDesktopWidget removal, dead PyQt4-era code removed)
+    - New: choose Shapefile (on disk) instead of memory layer as the output format
+    - New: quick tag picker - press Tab in the note field to pick tags from up to 10
+      configurable groups (numeric 1-9,0 or custom letter keys); adds a Tags column
+    - Compatibility range set to QGIS >=3.0.0, <=4.9.9
+

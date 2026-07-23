@@ -22,14 +22,14 @@ from __future__ import print_function, absolute_import
 import os
 from builtins import str
 
-from qgis.PyQt.QtCore import QTranslator, QSettings, QCoreApplication, QLocale, qVersion
-from qgis.PyQt.QtWidgets import QAction, QMessageBox, QInputDialog
+from qgis.PyQt.QtCore import QTranslator, QSettings, QCoreApplication, QLocale, QVariant
+from qgis.PyQt.QtWidgets import QAction, QMessageBox, QInputDialog, QFileDialog
 from qgis.PyQt.QtGui import QIcon
 
 from qgis.core import (QgsFeature, QgsProject, QgsGeometry, QgsCoordinateTransform, 
                        QgsMapLayer, QgsFeatureRequest, QgsVectorLayer, 
                        QgsLayerTreeGroup, QgsRenderContext, QgsCoordinateReferenceSystem, 
-                       QgsWkbTypes)
+                       QgsWkbTypes, QgsVectorFileWriter, QgsField)
 from qgis.gui import QgsRubberBand
 
 from .drawtools import (ToolPoint, ToolRectangle, ToolLine, ToolCircle, ToolPolygon,
@@ -37,7 +37,6 @@ from .drawtools import (ToolPoint, ToolRectangle, ToolLine, ToolCircle, ToolPoly
 from .quickdrawsettings import PluginConfigWindow
 from .quickdrawlayerdialog import LayerPromptDialog
 from .utils import tr
-from . import resources
 
 class QuickDraw(object):
     def __init__(self, iface):
@@ -59,7 +58,7 @@ class QuickDraw(object):
     def _setup_localization(self):
         override_flag = QSettings().value("locale/overrideFlag", False, type=bool)
         loc_name = QSettings().value("locale/userLocale", "") if override_flag else QLocale.system().name()
-        if loc_name.__class__.__name__ == 'QVariant' or not loc_name:
+        if not loc_name:
             loc_name = 'en'
             
         locale_prefix = loc_name[0:2]
@@ -69,8 +68,7 @@ class QuickDraw(object):
         if os.path.exists(translation_path):
             self.plugin_translator = QTranslator()
             self.plugin_translator.load(translation_path)
-            if qVersion() > '4.3.3':
-                QCoreApplication.installTranslator(self.plugin_translator)
+            QCoreApplication.installTranslator(self.plugin_translator)
 
     def unload(self):
         for act in self.plugin_actions:
@@ -79,7 +77,7 @@ class QuickDraw(object):
         del self.main_toolbar
 
     def create_action(self, icon_name, tooltip, callback, is_checkable=False, menu_obj=None, obj_name=None):
-        full_icon_path = f':/plugins/Qgeric/resources/{icon_name}'
+        full_icon_path = os.path.join(os.path.dirname(__file__), 'resources', icon_name)
         act = QAction(QIcon(full_icon_path), tooltip, self.iface.mainWindow())
         act.triggered.connect(callback)
         act.setCheckable(is_checkable)
@@ -96,14 +94,14 @@ class QuickDraw(object):
         return act
 
     def initGui(self):
-        self.create_action('CircleDraw.png', tr('Draw Circle'), self.activate_circle_tool, True, obj_name='mCircleDrawingTool')
-        self.create_action('RectangleDraw.png', tr('Draw Rectangle'), self.activate_rect_tool, True, obj_name='mRectangleDrawingTool')
-        self.create_action('LineDraw.png', tr('Draw Line'), self.activate_line_tool, True, obj_name='mLineDrawingTool')
-        self.create_action('PolygonDraw.png', tr('Draw Polygon'), self.activate_polygon_tool, True, obj_name='mPolygonDrawingTool')
-        self.create_action('PointDraw.png', tr('Draw Point'), self.activate_point_tool, True)
-        self.create_action('PointDrawXY.png', tr('Draw Point (XY)'), self.activate_coord_point_tool, False)
-        self.create_action('BufferDraw.png', tr('Draw Buffer'), self.activate_buffer_tool, True, obj_name='mBufferDrawingTool')
-        self.create_action('Settings.png', tr('Settings'), self.open_settings, obj_name='mSettings')
+        self.create_action('CircleDraw.svg', tr('Draw Circle'), self.activate_circle_tool, True, obj_name='mCircleDrawingTool')
+        self.create_action('RectangleDraw.svg', tr('Draw Rectangle'), self.activate_rect_tool, True, obj_name='mRectangleDrawingTool')
+        self.create_action('LineDraw.svg', tr('Draw Line'), self.activate_line_tool, True, obj_name='mLineDrawingTool')
+        self.create_action('PolygonDraw.svg', tr('Draw Polygon'), self.activate_polygon_tool, True, obj_name='mPolygonDrawingTool')
+        self.create_action('PointDraw.svg', tr('Draw Point'), self.activate_point_tool, True)
+        self.create_action('PointDrawXY.svg', tr('Draw Point (XY)'), self.activate_coord_point_tool, False)
+        self.create_action('BufferDraw.svg', tr('Draw Buffer'), self.activate_buffer_tool, True, obj_name='mBufferDrawingTool')
+        self.create_action('Settings.svg', tr('Settings'), self.open_settings, obj_name='mSettings')
 
     def _reset_current_tool(self, tool_class, action_idx, shape_type, tool_id):
         if self.active_tool:
@@ -243,6 +241,47 @@ class QuickDraw(object):
         if isinstance(self.active_tool, ToolPolygon):
             self.process_geometry()
 
+    def _export_to_shapefile(self, mem_layer, lname):
+        """Write the freshly built scratch layer to a Shapefile on disk and
+        return a layer opened from that file. Falls back to the in-memory
+        layer if the user cancels or the write fails."""
+        attr_name = self.config_window.attr_name
+        if len(attr_name) > 10:
+            self.iface.messageBar().pushWarning(
+                tr('Warning'),
+                tr("Attribute field '{0}' will be truncated to 10 characters in the Shapefile.").format(attr_name)
+            )
+
+        start_dir = self.config_window.shapefile_dir or QgsProject.instance().homePath() or ''
+        suggested_name = f"{(lname or 'quickdraw_layer').strip()}.shp"
+        suggested_path = os.path.join(start_dir, suggested_name) if start_dir else suggested_name
+
+        path, _ = QFileDialog.getSaveFileName(
+            self.iface.mainWindow(), tr('Save shapefile'), suggested_path, 'ESRI Shapefile (*.shp)'
+        )
+        if not path:
+            return mem_layer
+
+        if not path.lower().endswith('.shp'):
+            path += '.shp'
+
+        save_options = QgsVectorFileWriter.SaveVectorOptions()
+        save_options.driverName = 'ESRI Shapefile'
+        save_options.fileEncoding = 'UTF-8'
+
+        result = QgsVectorFileWriter.writeAsVectorFormatV3(
+            mem_layer, path, QgsProject.instance().transformContext(), save_options
+        )
+        write_error = result[0] if isinstance(result, tuple) else result
+        if write_error != QgsVectorFileWriter.WriterError.NoError:
+            self.iface.messageBar().pushWarning(
+                tr('Warning'), tr("Couldn't write the Shapefile, keeping a memory layer instead.")
+            )
+            return mem_layer
+
+        self.config_window.set_shapefile_dir(os.path.dirname(path))
+        return QgsVectorLayer(path, lname or os.path.splitext(os.path.basename(path))[0], 'ogr')
+
     def process_geometry(self):
         target_geom = self.active_tool.rb.asGeometry()
         is_valid = True
@@ -263,7 +302,7 @@ class QuickDraw(object):
                     has_warning, err_zero_val = True, True
 
         if is_valid and not has_warning:
-            lname, attr_val, is_append, lst_idx, avail_layers = '', '', False, 0, []
+            lname, attr_val, tags_val, is_append, lst_idx, avail_layers = '', '', '', False, 0, []
             loop_ok, prompt_accepted = False, True
             
             def_layer_id = None
@@ -271,8 +310,8 @@ class QuickDraw(object):
                 def_layer_id = self.recent_layers.get(self.current_shape)
             
             while not loop_ok and prompt_accepted:
-                dialog = LayerPromptDialog(self.current_shape, self.config_window.attr_name, def_layer_id)
-                lname, attr_val, is_append, lst_idx, avail_layers, prompt_accepted = dialog.request_layer_info()
+                dialog = LayerPromptDialog(self.current_shape, self.config_window.attr_name, def_layer_id, self.config_window.tag_groups)
+                lname, attr_val, tags_val, is_append, lst_idx, avail_layers, prompt_accepted = dialog.request_layer_info()
                 
                 if prompt_accepted:
                     loop_ok = (is_append and len(avail_layers) > 0) or (not is_append and lname.strip() != '')
@@ -285,20 +324,34 @@ class QuickDraw(object):
                 dest_layer = avail_layers[lst_idx]
                 if self.current_shape in ['point', 'XYpoint']:
                     target_geom = target_geom.centroid()
+                if 'Tags' not in [f.name() for f in dest_layer.fields()]:
+                    dest_layer.startEditing()
+                    dest_layer.addAttribute(QgsField('Tags', QVariant.String, len=255))
+                    dest_layer.commitChanges()
             else:
                 crs_auth = self.iface.mapCanvas().mapSettings().destinationCrs().authid()
-                attr_def = f"{self.config_window.attr_name}:string(255)"
+                fields_def = f"field={self.config_window.attr_name}:string(255)&field=Tags:string(255)"
                 
                 if self.current_shape == 'point':
-                    dest_layer = QgsVectorLayer(f"Point?crs={crs_auth}&field={attr_def}", lname, "memory")
+                    dest_layer = QgsVectorLayer(f"Point?crs={crs_auth}&{fields_def}", lname, "memory")
                     target_geom = target_geom.centroid()
+                    geom_category = 'Point'
                 elif self.current_shape == 'XYpoint':
-                    dest_layer = QgsVectorLayer(f"Point?crs={self.target_crs.authid()}&field={attr_def}", lname, "memory")
+                    dest_layer = QgsVectorLayer(f"Point?crs={self.target_crs.authid()}&{fields_def}", lname, "memory")
                     target_geom = target_geom.centroid()
+                    geom_category = 'Point'
                 elif self.current_shape == 'line':
-                    dest_layer = QgsVectorLayer(f"LineString?crs={crs_auth}&field={attr_def}", lname, "memory")
+                    dest_layer = QgsVectorLayer(f"LineString?crs={crs_auth}&{fields_def}", lname, "memory")
+                    geom_category = 'LineString'
                 else:
-                    dest_layer = QgsVectorLayer(f"Polygon?crs={crs_auth}&field={attr_def}", lname, "memory")
+                    dest_layer = QgsVectorLayer(f"Polygon?crs={crs_auth}&{fields_def}", lname, "memory")
+                    geom_category = 'Polygon'
+
+                if self.config_window.layer_format == 'shapefile':
+                    dest_layer = self._export_to_shapefile(dest_layer, lname)
+
+                dest_layer.setCustomProperty('quickdraw/geom_category', geom_category)
+                dest_layer.setCustomProperty('quickdraw/attr_field', self.config_window.attr_name)
             
             dest_layer.startEditing()
             if not is_append:
@@ -315,9 +368,11 @@ class QuickDraw(object):
                     sym.symbolLayer(0).setStrokeColor(self.config_window.stroke_color)
                     sym.setSize(self.config_window.stroke_width * 2)
                 
-            new_feat = QgsFeature()
+            new_feat = QgsFeature(dest_layer.fields())
             new_feat.setGeometry(target_geom)
-            new_feat.setAttributes([attr_val])
+            new_feat.setAttribute(self.config_window.attr_name, attr_val)
+            if 'Tags' in [f.name() for f in dest_layer.fields()]:
+                new_feat.setAttribute('Tags', tags_val)
             dest_layer.dataProvider().addFeatures([new_feat])
             dest_layer.commitChanges()
             
