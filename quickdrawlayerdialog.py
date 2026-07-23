@@ -1,5 +1,5 @@
 """
-quickdraw Tools - beta 1
+quickdraw tools - beta 1
 Quick drawing tools for QGIS: point, line, rectangle, circle, polygon
 and buffer, saved straight into memory layers.
 
@@ -20,7 +20,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 from qgis.PyQt.QtCore import Qt, QEvent
 from qgis.PyQt.QtWidgets import QDialog, QComboBox, QLineEdit, QVBoxLayout, QCheckBox, QDialogButtonBox, QLabel
-from qgis.core import QgsProject
+from qgis.core import QgsProject, QgsMapLayer, QgsWkbTypes, QgsVectorDataProvider
 from .utils import tr
 from .quickdrawtags import QuickTagPicker
 
@@ -31,17 +31,26 @@ class LayerPromptDialog(QDialog):
         self.tag_groups = tag_groups or []
         self.selected_tags = []
 
-        type_mapper = {'point': 'Point', 'XYpoint': 'Point', 'line': 'LineString'}
-        target_uri_type = type_mapper.get(shape_type, 'Polygon')
+        geom_type_mapper = {
+            'point': QgsWkbTypes.GeometryType.PointGeometry,
+            'XYpoint': QgsWkbTypes.GeometryType.PointGeometry,
+            'line': QgsWkbTypes.GeometryType.LineGeometry,
+        }
+        target_geom_type = geom_type_mapper.get(shape_type, QgsWkbTypes.GeometryType.PolygonGeometry)
 
         self.combo_layers = QComboBox()
         self.available_layers = []
-        
+
         for layer in QgsProject.instance().mapLayers().values():
-            if (layer.customProperty('quickdraw/geom_category') == target_uri_type
-                    and layer.customProperty('quickdraw/attr_field') == attr_field_name):
-                self.available_layers.append(layer)
-                self.combo_layers.addItem(layer.name())
+            if layer.type() != QgsMapLayer.LayerType.VectorLayer:
+                continue
+            if layer.geometryType() != target_geom_type:
+                continue
+            provider = layer.dataProvider()
+            if provider is None or not (provider.capabilities() & QgsVectorDataProvider.Capability.AddFeatures):
+                continue
+            self.available_layers.append(layer)
+            self.combo_layers.addItem(layer.name())
 
         self.chk_append = QCheckBox(tr('Add to an existing layer'))
         self.chk_append.toggled.connect(self._toggle_append_mode)
@@ -70,7 +79,7 @@ class LayerPromptDialog(QDialog):
         layout.addWidget(self.input_attribute)
 
         if self.tag_groups:
-            tags_hint = tr('Tags (press Tab in the note field above to step through your tag groups):')
+            tags_hint = tr('Tags (press Tab in the note field above to step through your tag groups, then \u2190/\u2192 to switch groups):')
             layout.addWidget(QLabel(tags_hint))
             self.lbl_tags_value = QLabel(tr('(none)'))
             layout.addWidget(self.lbl_tags_value)

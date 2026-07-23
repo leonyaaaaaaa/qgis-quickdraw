@@ -1,5 +1,5 @@
 """
-quickdraw Tools - beta 1
+quickdraw tools - beta 1
 Quick drawing tools for QGIS: point, line, rectangle, circle, polygon
 and buffer, saved straight into memory layers.
 
@@ -131,7 +131,8 @@ class ToolPolygon(QgsMapTool):
         self.rb.setWidth(stroke_width)
 
     def keyPressEvent(self, event):
-        if event.matches(QKeySequence.StandardKey.Undo) and self.rb.numberOfVertices() > 1:
+        if (event.matches(QKeySequence.StandardKey.Undo) or event.key() == Qt.Key.Key_Backspace) \
+                and self.rb.numberOfVertices() > 1:
             self.rb.removeLastPoint()
 
     def canvasPressEvent(self, event):
@@ -232,7 +233,8 @@ class ToolLine(QgsMapTool):
         self.rb.setWidth(stroke_width)
 
     def keyPressEvent(self, event):
-        if event.matches(QKeySequence.StandardKey.Undo) and self.rb.numberOfVertices() > 1:
+        if (event.matches(QKeySequence.StandardKey.Undo) or event.key() == Qt.Key.Key_Backspace) \
+                and self.rb.numberOfVertices() > 1:
             self.rb.removeLastPoint()
 
     def canvasPressEvent(self, event):

@@ -1,5 +1,5 @@
 """
-quickdraw Tools - beta 1
+quickdraw tools - beta 1
 Quick drawing tools for QGIS: point, line, rectangle, circle, polygon
 and buffer, saved straight into memory layers.
 

@@ -1,5 +1,5 @@
 """
-quickdraw Tools - beta 1
+quickdraw tools - beta 1
 Quick drawing tools for QGIS: point, line, rectangle, circle, polygon
 and buffer, saved straight into memory layers.
 
@@ -320,76 +320,83 @@ class QuickDraw(object):
 
         if prompt_accepted and not has_warning:
             dest_layer = None
-            if is_append:
-                dest_layer = avail_layers[lst_idx]
-                if self.current_shape in ['point', 'XYpoint']:
-                    target_geom = target_geom.centroid()
-                if 'Tags' not in [f.name() for f in dest_layer.fields()]:
-                    dest_layer.startEditing()
-                    dest_layer.addAttribute(QgsField('Tags', QVariant.String, len=255))
-                    dest_layer.commitChanges()
-            else:
-                crs_auth = self.iface.mapCanvas().mapSettings().destinationCrs().authid()
-                fields_def = f"field={self.config_window.attr_name}:string(255)&field=Tags:string(255)"
-                
-                if self.current_shape == 'point':
-                    dest_layer = QgsVectorLayer(f"Point?crs={crs_auth}&{fields_def}", lname, "memory")
-                    target_geom = target_geom.centroid()
-                    geom_category = 'Point'
-                elif self.current_shape == 'XYpoint':
-                    dest_layer = QgsVectorLayer(f"Point?crs={self.target_crs.authid()}&{fields_def}", lname, "memory")
-                    target_geom = target_geom.centroid()
-                    geom_category = 'Point'
-                elif self.current_shape == 'line':
-                    dest_layer = QgsVectorLayer(f"LineString?crs={crs_auth}&{fields_def}", lname, "memory")
-                    geom_category = 'LineString'
+            try:
+                if is_append:
+                    dest_layer = avail_layers[lst_idx]
+                    if self.current_shape in ['point', 'XYpoint']:
+                        target_geom = target_geom.centroid()
+                    existing_fields = [f.name() for f in dest_layer.fields()]
+                    missing_fields = []
+                    if self.config_window.attr_name not in existing_fields:
+                        missing_fields.append(QgsField(self.config_window.attr_name, QVariant.String, len=255))
+                    if 'Tags' not in existing_fields:
+                        missing_fields.append(QgsField('Tags', QVariant.String, len=255))
+                    if missing_fields:
+                        dest_layer.startEditing()
+                        for fld in missing_fields:
+                            dest_layer.addAttribute(fld)
+                        dest_layer.commitChanges()
                 else:
-                    dest_layer = QgsVectorLayer(f"Polygon?crs={crs_auth}&{fields_def}", lname, "memory")
-                    geom_category = 'Polygon'
+                    crs_auth = self.iface.mapCanvas().mapSettings().destinationCrs().authid()
+                    fields_def = f"field={self.config_window.attr_name}:string(255)&field=Tags:string(255)"
+                    
+                    if self.current_shape == 'point':
+                        dest_layer = QgsVectorLayer(f"Point?crs={crs_auth}&{fields_def}", lname, "memory")
+                        target_geom = target_geom.centroid()
+                    elif self.current_shape == 'XYpoint':
+                        dest_layer = QgsVectorLayer(f"Point?crs={self.target_crs.authid()}&{fields_def}", lname, "memory")
+                        target_geom = target_geom.centroid()
+                    elif self.current_shape == 'line':
+                        dest_layer = QgsVectorLayer(f"LineString?crs={crs_auth}&{fields_def}", lname, "memory")
+                    else:
+                        dest_layer = QgsVectorLayer(f"Polygon?crs={crs_auth}&{fields_def}", lname, "memory")
 
-                if self.config_window.layer_format == 'shapefile':
-                    dest_layer = self._export_to_shapefile(dest_layer, lname)
-
-                dest_layer.setCustomProperty('quickdraw/geom_category', geom_category)
-                dest_layer.setCustomProperty('quickdraw/attr_field', self.config_window.attr_name)
-            
-            dest_layer.startEditing()
-            if not is_append:
-                sym = dest_layer.renderer().symbol()
-                sym.setColor(self.config_window.fill_color)
+                    if self.config_window.layer_format == 'shapefile':
+                        dest_layer = self._export_to_shapefile(dest_layer, lname)
                 
-                if dest_layer.geometryType() == QgsWkbTypes.GeometryType.PolygonGeometry:
-                    sym.symbolLayer(0).setStrokeColor(self.config_window.stroke_color)
-                    sym.symbolLayer(0).setStrokeWidth(self.config_window.stroke_width * 0.26)
-                elif dest_layer.geometryType() == QgsWkbTypes.GeometryType.LineGeometry:
-                    sym.setColor(self.config_window.stroke_color)
-                    sym.setWidth(self.config_window.stroke_width * 0.26)
-                elif dest_layer.geometryType() == QgsWkbTypes.GeometryType.PointGeometry:
-                    sym.symbolLayer(0).setStrokeColor(self.config_window.stroke_color)
-                    sym.setSize(self.config_window.stroke_width * 2)
+                dest_layer.startEditing()
+                if not is_append:
+                    sym = dest_layer.renderer().symbol()
+                    sym.setColor(self.config_window.fill_color)
+                    
+                    if dest_layer.geometryType() == QgsWkbTypes.GeometryType.PolygonGeometry:
+                        sym.symbolLayer(0).setStrokeColor(self.config_window.stroke_color)
+                        sym.symbolLayer(0).setStrokeWidth(self.config_window.stroke_width * 0.26)
+                    elif dest_layer.geometryType() == QgsWkbTypes.GeometryType.LineGeometry:
+                        sym.setColor(self.config_window.stroke_color)
+                        sym.setWidth(self.config_window.stroke_width * 0.26)
+                    elif dest_layer.geometryType() == QgsWkbTypes.GeometryType.PointGeometry:
+                        sym.symbolLayer(0).setStrokeColor(self.config_window.stroke_color)
+                        sym.setSize(self.config_window.stroke_width * 2)
+                    
+                new_feat = QgsFeature(dest_layer.fields())
+                new_feat.setGeometry(target_geom)
+                new_feat.setAttribute(self.config_window.attr_name, attr_val)
+                if 'Tags' in [f.name() for f in dest_layer.fields()]:
+                    new_feat.setAttribute('Tags', tags_val)
+                dest_layer.dataProvider().addFeatures([new_feat])
+                dest_layer.commitChanges()
                 
-            new_feat = QgsFeature(dest_layer.fields())
-            new_feat.setGeometry(target_geom)
-            new_feat.setAttribute(self.config_window.attr_name, attr_val)
-            if 'Tags' in [f.name() for f in dest_layer.fields()]:
-                new_feat.setAttribute('Tags', tags_val)
-            dest_layer.dataProvider().addFeatures([new_feat])
-            dest_layer.commitChanges()
-            
-            if self.config_window.remember_layer:
-                self.recent_layers[self.current_shape] = dest_layer.id()
-            
-            if not is_append:
-                proj = QgsProject.instance()
-                proj.addMapLayer(dest_layer, False)
-                root = proj.layerTreeRoot()
-                if not root.findGroup(self.config_window.attr_name):
-                    root.insertChildNode(0, QgsLayerTreeGroup(self.config_window.attr_name))
-                grp = root.findGroup(self.config_window.attr_name)
-                grp.insertLayer(0, dest_layer)
+                if self.config_window.remember_layer:
+                    self.recent_layers[self.current_shape] = dest_layer.id()
                 
-            self.iface.layerTreeView().refreshLayerSymbology(dest_layer.id())
-            self.iface.mapCanvas().refresh()
+                if not is_append:
+                    proj = QgsProject.instance()
+                    proj.addMapLayer(dest_layer, False)
+                    root = proj.layerTreeRoot()
+                    if not root.findGroup(self.config_window.attr_name):
+                        root.insertChildNode(0, QgsLayerTreeGroup(self.config_window.attr_name))
+                    grp = root.findGroup(self.config_window.attr_name)
+                    grp.insertLayer(0, dest_layer)
+                    
+                self.iface.layerTreeView().refreshLayerSymbology(dest_layer.id())
+                self.iface.mapCanvas().refresh()
+            except Exception as exc:
+                if dest_layer is not None and dest_layer.isEditable():
+                    dest_layer.rollBack()
+                self.iface.messageBar().pushCritical(
+                    tr('Error'), tr("Couldn't add the shape: {0}").format(exc)
+                )
         else:
             if has_warning:
                 if err_no_attr:

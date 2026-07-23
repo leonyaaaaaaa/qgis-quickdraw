@@ -4,7 +4,7 @@
 **License:** [GNU GPL v3](LICENSE)
 **Author:** leonya ivanchikov
 
-quickdraw Tools is a QGIS plugin that makes on-the-fly digitizing fast.
+quickdraw tools is a QGIS plugin that makes on-the-fly digitizing fast.
 It adds a toolbar of simple drawing tools — circle, rectangle, line, polygon,
 point (with an optional X/Y or DMS coordinate entry) and buffer — and saves
 what you draw straight into memory layers, without the usual layer-creation
@@ -41,7 +41,7 @@ Open **quickdraw → Settings** to configure:
 1. Download or clone this repository.
 2. Copy the folder into your QGIS plugins directory, or zip it and install
    it via **Plugins → Manage and Install Plugins → Install from ZIP**.
-3. Enable **quickdraw Tools** in the Plugins panel.
+3. Enable **quickdraw tools** in the Plugins panel.
 
 ## License
 
